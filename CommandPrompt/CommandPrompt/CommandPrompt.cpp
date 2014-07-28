@@ -16,15 +16,15 @@ int _tmain(int argc, _TCHAR* argv[])
 
 	_tsetlocale( LC_ALL , _T( "Korean" ) );
 
-	SortOfCommand isExit;
+	SortOfCommand command;
 	while( 1 )
 	{
-		isExit = CmdProcessing();
-		switch( isExit )
+		command = CmdProcessing();
+		switch( command )
 		{
 			case COMMAND_EXIT:
 				_fputts( _T( "명령어 처리를 종료합니다.\n" ) , stdout );
-				break;
+				return 0;
 			case COMMAND_PWD:
 				GetCurrentDirectory( MAX_PATH, curDir);
 				_tprintf( _T( "%s\n" ) , curDir );
