@@ -8,12 +8,12 @@ SortOfCommand CmdProcessing( void )
 {
 
 	TCHAR ERROR_CMD[]
-		= _T( "'%s'Àº(´Â) ½ÇÇàÇÒ ¼ö ÀÖ´Â ÇÁ·Î±×·¥ÀÌ ¾Æ´Õ´Ï´Ù.\n" );
+		= _T( "'%s'ï¿½ï¿½(ï¿½ï¿½) ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½Ö´ï¿½ ï¿½ï¿½ï¿½Î±×·ï¿½ï¿½ï¿½ ï¿½Æ´Õ´Ï´ï¿½.\n" );
 	TCHAR inputString[STR_LEN] = { 0 , };
 	TCHAR cmdString[STR_LEN] = { 0 , };
 
 	TCHAR cmdTokenList[CMD_TOKE_NUM][STR_LEN] = { 0 , };
-	TCHAR seps[] = _T( ",\t\n" );
+	TCHAR seps[] = _T( " ,\t\n" );
 
 	_fputts( _T( "Best Command Prompt >>" ) , stdout );
 	_getts_s( inputString );
