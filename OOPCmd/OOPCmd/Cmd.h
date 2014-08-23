@@ -9,6 +9,8 @@ enum CmdStatus
 	CMD_PWD,
 	CMD_ECHO,
 	CMD_START,
+	CMD_LIST,
+	CMD_KILL,
 	CMD_ETC,
 };
 
@@ -22,7 +24,7 @@ public:
 
 	void			Init(int argc, _TCHAR* argv[]);
 	void			Run();
-	void			SetCommand(std::wstring cmd) { m_Command = cmd; }
+	void			SetCommand(std::wstring name) { m_CmdName = name; }
 
 private:
 
@@ -32,10 +34,19 @@ private:
 private:
 
 	void			CmdProc();
-	void			CmdTokenize();
-	CmdStatus		ReadCmd();
-	void			StartCmd( std::wstring command );
-	std::wstring	CreateNextCmd( std::wstring cmd );
+	void			GetCommand();
+	CmdStatus		ReadCommand();
+
+	void			ClearStream();
+	void			StartNewCmd( std::wstring& command );
+	std::wstring	CreateNextCommand( std::wstring& beginCommand );
+
+	bool			ListProcessInfo();
+	bool			KillProcess();
+
+	HANDLE			GetProcessSnapShot();
+	PROCESSENTRY32	GetProcessEntryFirst32( HANDLE& hSnap );
+	DWORD			GetProcessID( std::wstring& procName , HANDLE& hSnap ,PROCESSENTRY32& pe32);
 
 private:
 
@@ -46,6 +57,6 @@ private:
 	std::wstring				m_CmdString;
 	std::wstring				m_LastString;
 	std::wstring				m_ErrorMsg;
-	std::wstring				m_Command;
+	std::wstring				m_CmdName;
 };
 
