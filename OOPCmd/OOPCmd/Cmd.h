@@ -14,7 +14,6 @@ enum CmdStatus
 	CMD_ETC,
 };
 
-
 class Cmd
 {
 public:

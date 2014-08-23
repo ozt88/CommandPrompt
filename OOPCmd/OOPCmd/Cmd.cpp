@@ -40,10 +40,16 @@ void Cmd::Init( int argc , _TCHAR* argv[] )
 	SetCommand( _T( "OOPCmd.exe" ) );
 	if( argc > 1 )
 	{
-		m_CmdString = argv[1];
-		for( int i = 1; i < argc - 1; ++i )
+		for( int i = 1; i < argc; ++i )
 		{
-			m_LastString = m_LastString + _T( " " ) + argv[i + 1];
+			m_StringStream << argv[i];
+		}
+		std::wstring buffer;
+		m_StringStream >> m_CmdString;
+		m_StringStream >> m_LastString;
+		while( m_StringStream >> buffer )
+		{
+			m_LastString = m_LastString + _T( " " ) + buffer;
 		}
 		CmdProc();
 	}
@@ -66,11 +72,11 @@ void Cmd::GetCommand()
 	m_StringStream.str( m_InputString );
 	m_StringStream >> m_CmdString;
 	std::transform( m_CmdString.begin() , m_CmdString.end() , m_CmdString.begin() , tolower );
-	std::wstring option;
+	std::wstring buffer;
 	m_StringStream >> m_LastString;
-	while( m_StringStream >> option )
+	while( m_StringStream >> buffer )
 	{
-		m_LastString = m_LastString + _T( " " ) + option;
+		m_LastString = m_LastString + _T( " " ) + buffer;
 	}
 }
 
