@@ -67,7 +67,7 @@ void Cmd::Run()
 void Cmd::GetCommand()
 {
 	ClearStream();
-	std::wcout << _T( "Best Command Prompt >>" );
+	std::wcout << _T( "Best Command Prompt>>" );
 	getline( std::wcin , m_InputString );
 	m_StringStream.str( m_InputString );
 	m_StringStream >> m_CmdString;
@@ -83,7 +83,7 @@ void Cmd::GetCommand()
 void Cmd::CmdProc()
 {
 	CmdStatus cmd = ReadCommand();
-	TCHAR curDir[MAX_PATH] = { 0 , };
+	TCHAR secondCmd[MAX_PATH] = { 0 , };
 
 	switch( cmd )
 	{
@@ -91,8 +91,8 @@ void Cmd::CmdProc()
 			m_IsRunning = FALSE;
 			return;
 		case CMD_PWD:
-			GetCurrentDirectory( MAX_PATH , curDir);
-			std::wcout << curDir << std::endl;
+			GetCurrentDirectory( MAX_PATH , secondCmd);
+			std::wcout << secondCmd << std::endl;
 			return;
 		case CMD_ECHO:
 			std::wcout << _T("echo:") <<m_LastString << std::endl;
@@ -109,6 +109,21 @@ void Cmd::CmdProc()
 			return;
 		case CMD_KILL:
 			KillProcess();
+			return;
+		case CMD_DIR:
+			ShowDir();
+			return;
+		case CMD_MKD:
+			MakeDir();
+			return;
+		case CMD_RMD:
+			m_StringStream.clear();
+			m_StringStream.str( m_LastString );
+			m_StringStream >> secondCmd;
+			RemoveDir(secondCmd);
+			return;
+		case CMD_DEL:
+			deleteFile();
 			return;
 		default:
 			return;
@@ -153,6 +168,22 @@ CmdStatus Cmd::ReadCommand()
 	else if( !m_CmdString.compare( _T( "kill" ) ) )
 	{
 		result = CMD_KILL;
+	}
+	else if( !m_CmdString.compare( _T( "dir" ) ) )
+	{
+		result = CMD_DIR;
+	}
+	else if( !m_CmdString.compare( _T( "mkdir" ) ) )
+	{
+		result = CMD_MKD;
+	}
+	else if( !m_CmdString.compare( _T( "rmdir" ) ) )
+	{
+		result = CMD_RMD;
+	}
+	else if( !m_CmdString.compare( _T( "del" ) ) )
+	{
+		result = CMD_DEL;
 	}
 	else
 	{
@@ -259,4 +290,125 @@ DWORD Cmd::GetProcessID( std::wstring& procName , HANDLE& hSnap , PROCESSENTRY32
 }
 
 
+bool Cmd::ShowDir()
+{
+	TCHAR dirPath[MAX_PATH];
+	GetCurrentDirectory( MAX_PATH , dirPath );
+	WIN32_FIND_DATA FindFileData;
+	HANDLE hFind = INVALID_HANDLE_VALUE;
 
+	_tcsncat_s( dirPath , _T( "\\*" ) , 3 );
+	hFind = FindFirstFile( dirPath , &FindFileData );
+	if( hFind == INVALID_HANDLE_VALUE )
+	{
+		_tprintf_s( _T( "Invalid File Handle\n" ) );
+		return FALSE;
+	}
+	else
+	{
+		_tprintf_s( _T( "\n%s \n\n" ) , dirPath );
+		ShowFile( FindFileData );
+		while( FindNextFile( hFind , &FindFileData ) )
+		{
+			ShowFile( FindFileData );
+		}
+		_tprintf_s( _T( "\n" ) );
+	}
+	FindClose( hFind );
+	return TRUE;
+}
+
+void Cmd::ShowFile( WIN32_FIND_DATA findFileData )
+{
+	TCHAR fileDirInfo[MAX_STR_LEN] = { 0 , };
+	TCHAR fileTimeInfo[MAX_STR_LEN] = { 0 , };
+	SYSTEMTIME stUTC , stLocal;
+	if( findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY )
+	{
+		_tcscpy_s( fileDirInfo , _T( "<DIR>" ) );
+	}
+	else
+	{
+		_tcscpy_s( fileDirInfo , _T( "" ) );
+	}
+
+	FileTimeToSystemTime( &findFileData.ftLastWriteTime , &stUTC );
+	SystemTimeToTzSpecificLocalTime( NULL , &stUTC , &stLocal );
+
+	_stprintf_s( fileTimeInfo , _T( "%02d/%02d/%d\t%02d:%02d" ) ,
+				 stLocal.wMonth , stLocal.wDay ,
+				 stLocal.wYear , stLocal.wHour ,
+				 stLocal.wMinute );
+	_tprintf_s( _T( "%s\t%5s\t%4ukb\t\t%s\n" ) , fileTimeInfo , fileDirInfo, findFileData.nFileSizeLow / 1000 , findFileData.cFileName );
+
+}
+
+void Cmd::MakeDir()
+{
+	TCHAR dirName[MAX_STR_LEN];
+	m_StringStream.clear();
+	m_StringStream.str( m_LastString );
+	m_StringStream >> dirName;
+	CreateDirectory( dirName , NULL );
+}
+
+bool Cmd::RemoveDir(TCHAR* deletePath)
+{
+	TCHAR dirName[MAX_PATH];
+	WIN32_FIND_DATA FindFileData;
+	HANDLE hFind = INVALID_HANDLE_VALUE;
+
+	_stprintf_s( dirName , _T( "%s\\*" ) , deletePath);
+	hFind = FindFirstFile( dirName , &FindFileData );
+	if( hFind == INVALID_HANDLE_VALUE )
+	{
+		if( RemoveDirectory( dirName ) )
+		{
+			_tprintf_s( _T( "%s is deleted\n" ) , dirName );
+		}
+		else
+		{
+			_tprintf_s( _T( "%s is not found\n" ) , dirName );
+		}
+	}
+	else
+	{
+		RemoveDirIter( FindFileData , deletePath );
+		while( FindNextFile( hFind , &FindFileData ) )
+		{
+			RemoveDirIter( FindFileData , deletePath );
+		}
+	}
+	FindClose( hFind );
+	return true;
+}
+
+void Cmd::RemoveDirIter( WIN32_FIND_DATA findFileData , TCHAR* srcName)
+{
+	TCHAR path[MAX_STR_LEN] = { 0 , };
+	_stprintf_s( path , _T( "%s\\%s" ) , srcName , findFileData.cFileName );
+	if( findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY )
+	{
+		RemoveDir( path );
+	}
+	else
+	{
+		_tremove( path );
+	}
+}
+
+void Cmd::deleteFile()
+{
+	TCHAR fileName[MAX_STR_LEN];
+	m_StringStream.clear();
+	m_StringStream.str( m_LastString );
+	m_StringStream >> fileName;
+	if( !_tremove( fileName ) )
+	{
+		_tprintf_s( _T( "%s is deleted\n" ) , fileName );
+	}
+	else
+	{
+		_tprintf_s( _T( "%s is not found\n" ) , fileName );
+	}
+}

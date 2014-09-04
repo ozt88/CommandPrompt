@@ -12,6 +12,12 @@ enum CmdStatus
 	CMD_LIST,
 	CMD_KILL,
 	CMD_ETC,
+	CMD_DIR,	//디렉토리 조회
+	CMD_MKD,	//디렉토리 생성
+	CMD_RMD,	//디렉토리 삭제
+	CMD_DEL,	//파일 삭제
+	CMD_REN,	//이름 변경
+
 };
 
 class Cmd
@@ -46,6 +52,13 @@ private:
 	HANDLE			GetProcessSnapShot();
 	PROCESSENTRY32	GetProcessEntryFirst32( HANDLE& hSnap );
 	DWORD			GetProcessID( std::wstring& procName , HANDLE& hSnap ,PROCESSENTRY32& pe32);
+
+	void			ShowFile( WIN32_FIND_DATA findFileData );
+	bool			ShowDir();
+	void			MakeDir();
+	bool			RemoveDir(TCHAR* dirPath);
+	void			RemoveDirIter( WIN32_FIND_DATA FindFileData , TCHAR* srcName);
+	void			deleteFile();
 
 private:
 
