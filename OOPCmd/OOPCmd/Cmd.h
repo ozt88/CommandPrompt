@@ -4,19 +4,19 @@
 
 enum CmdStatus
 {
-	CMD_NONE,
-	CMD_EXIT,
-	CMD_PWD,
-	CMD_ECHO,
-	CMD_START,
-	CMD_LIST,
-	CMD_KILL,
-	CMD_ETC,
-	CMD_DIR,	//디렉토리 조회
-	CMD_MKD,	//디렉토리 생성
-	CMD_RMD,	//디렉토리 삭제
-	CMD_DEL,	//파일 삭제
-	CMD_REN,	//이름 변경
+	CMD_NONE ,
+	CMD_EXIT ,
+	CMD_PWD ,
+	CMD_ECHO ,
+	CMD_START ,
+	CMD_LIST ,
+	CMD_KILL ,
+	CMD_ETC ,
+	CMD_DIR ,	//디렉토리 조회
+	CMD_MKD ,	//디렉토리 생성
+	CMD_RMD ,	//디렉토리 삭제
+	CMD_DEL ,	//파일 삭제
+	CMD_REN ,	//이름 변경
 
 };
 
@@ -27,9 +27,12 @@ public:
 	static Cmd*		GetInstance();
 	static void		ReleaseInstance();
 
-	void			Init(int argc, _TCHAR* argv[]);
+	void			Init( int argc , _TCHAR* argv[] );
 	void			Run();
-	void			SetCommand(std::wstring name) { m_CmdName = name; }
+	void			SetCommand( std::wstring name )
+	{
+		m_CmdName = name;
+	}
 
 private:
 
@@ -51,14 +54,16 @@ private:
 
 	HANDLE			GetProcessSnapShot();
 	PROCESSENTRY32	GetProcessEntryFirst32( HANDLE& hSnap );
-	DWORD			GetProcessID( std::wstring& procName , HANDLE& hSnap ,PROCESSENTRY32& pe32);
+	DWORD			GetProcessID( std::wstring& procName , HANDLE& hSnap , PROCESSENTRY32& pe32 );
 
 	void			ShowFile( WIN32_FIND_DATA findFileData );
 	bool			ShowDir();
 	void			MakeDir();
-	bool			RemoveDir(TCHAR* dirPath);
-	void			RemoveDirIter( WIN32_FIND_DATA FindFileData , TCHAR* srcName);
-	void			deleteFile();
+
+	bool			RemoveDir( TCHAR* dirPath );
+	void			RemoveDirIter( WIN32_FIND_DATA FindFileData , TCHAR* srcName );
+	void			DeleteFile();
+	void			RenameFile();
 
 private:
 

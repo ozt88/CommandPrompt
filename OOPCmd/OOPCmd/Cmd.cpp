@@ -4,9 +4,9 @@
 Cmd* Cmd::m_Instance = nullptr;
 
 Cmd::Cmd()
-	:m_InputString() , m_CmdString() , m_IsRunning( true ),
-	m_ErrorMsg( _T( "%s is not able to run.\n" )) ,
-	m_CmdName( _T( "OOPCmd.exe" ) ) 
+	:m_InputString() , m_CmdString() , m_IsRunning( true ) ,
+	m_ErrorMsg( _T( "%s is not able to run.\n" ) ) ,
+	m_CmdName( _T( "OOPCmd.exe" ) )
 {
 }
 
@@ -91,17 +91,17 @@ void Cmd::CmdProc()
 			m_IsRunning = FALSE;
 			return;
 		case CMD_PWD:
-			GetCurrentDirectory( MAX_PATH , secondCmd);
+			GetCurrentDirectory( MAX_PATH , secondCmd );
 			std::wcout << secondCmd << std::endl;
 			return;
 		case CMD_ECHO:
-			std::wcout << _T("echo:") <<m_LastString << std::endl;
+			std::wcout << _T( "echo:" ) << m_LastString << std::endl;
 			return;
 		case CMD_START:
-			StartNewCmd(CreateNextCommand(m_CmdName));
+			StartNewCmd( CreateNextCommand( m_CmdName ) );
 			return;
 		case CMD_ETC:
-			StartNewCmd(CreateNextCommand(m_CmdString));
+			StartNewCmd( CreateNextCommand( m_CmdString ) );
 			std::wcout << m_InputString << std::endl;
 			return;
 		case CMD_LIST:
@@ -120,10 +120,13 @@ void Cmd::CmdProc()
 			m_StringStream.clear();
 			m_StringStream.str( m_LastString );
 			m_StringStream >> secondCmd;
-			RemoveDir(secondCmd);
+			RemoveDir( secondCmd );
 			return;
 		case CMD_DEL:
-			deleteFile();
+			DeleteFile();
+			return;
+		case CMD_REN:
+			RenameFile();
 			return;
 		default:
 			return;
@@ -145,7 +148,7 @@ void Cmd::ClearStream()
 CmdStatus Cmd::ReadCommand()
 {
 	CmdStatus result = CMD_NONE;
-	if( !m_CmdString.compare( _T( "exit" )) )
+	if( !m_CmdString.compare( _T( "exit" ) ) )
 	{
 		result = CMD_EXIT;
 	}
@@ -185,6 +188,10 @@ CmdStatus Cmd::ReadCommand()
 	{
 		result = CMD_DEL;
 	}
+	else if( !m_CmdString.compare( _T( "ren" ) ) )
+	{
+		result = CMD_REN;
+	}
 	else
 	{
 		result = CMD_ETC;
@@ -193,12 +200,12 @@ CmdStatus Cmd::ReadCommand()
 	return result;
 }
 
-void Cmd::StartNewCmd(std::wstring& command)
+void Cmd::StartNewCmd( std::wstring& command )
 {
 	STARTUPINFO si = { 0 , };
 	PROCESS_INFORMATION pi;
 	si.cb = sizeof( si );
-	CreateProcess( NULL , (TCHAR*)command.c_str() , NULL , NULL ,
+	CreateProcess( NULL , ( TCHAR* )command.c_str() , NULL , NULL ,
 				   TRUE , CREATE_NEW_CONSOLE , NULL , NULL , &si , &pi );
 	CloseHandle( pi.hProcess );
 	CloseHandle( pi.hThread );
@@ -207,7 +214,7 @@ void Cmd::StartNewCmd(std::wstring& command)
 
 std::wstring Cmd::CreateNextCommand( std::wstring& beginCommand )
 {
-	std::wstring nextCommand = beginCommand + _T(" ") + m_LastString;
+	std::wstring nextCommand = beginCommand + _T( " " ) + m_LastString;
 	return nextCommand;
 }
 
@@ -229,7 +236,7 @@ bool Cmd::ListProcessInfo()
 bool Cmd::KillProcess()
 {
 	HANDLE hProcessSnap = GetProcessSnapShot();
-	PROCESSENTRY32 pe32 = GetProcessEntryFirst32(hProcessSnap); 
+	PROCESSENTRY32 pe32 = GetProcessEntryFirst32( hProcessSnap );
 	std::wstring procName;
 	m_StringStream.clear();
 	m_StringStream.str( m_LastString );
@@ -242,13 +249,13 @@ bool Cmd::KillProcess()
 		return false;
 	}
 	HANDLE hProc = OpenProcess( PROCESS_ALL_ACCESS , FALSE , ProcID );
-	TerminateProcess( hProc , 0);
+	TerminateProcess( hProc , 0 );
 	_tprintf_s( _T( "%s is Terminated.\n" ) , procName.c_str() );
 	CloseHandle( hProcessSnap );
 	return true;
 }
 
-PROCESSENTRY32 Cmd::GetProcessEntryFirst32(HANDLE& hSnap)
+PROCESSENTRY32 Cmd::GetProcessEntryFirst32( HANDLE& hSnap )
 {
 	PROCESSENTRY32 pe32;
 	pe32.dwSize = sizeof( PROCESSENTRY32 );
@@ -339,7 +346,7 @@ void Cmd::ShowFile( WIN32_FIND_DATA findFileData )
 				 stLocal.wMonth , stLocal.wDay ,
 				 stLocal.wYear , stLocal.wHour ,
 				 stLocal.wMinute );
-	_tprintf_s( _T( "%s\t%5s\t%4ukb\t\t%s\n" ) , fileTimeInfo , fileDirInfo, findFileData.nFileSizeLow / 1000 , findFileData.cFileName );
+	_tprintf_s( _T( "%s\t%5s\t%4ukb\t\t%s\n" ) , fileTimeInfo , fileDirInfo , findFileData.nFileSizeLow / 1000 , findFileData.cFileName );
 
 }
 
@@ -352,26 +359,15 @@ void Cmd::MakeDir()
 	CreateDirectory( dirName , NULL );
 }
 
-bool Cmd::RemoveDir(TCHAR* deletePath)
+bool Cmd::RemoveDir( TCHAR* deletePath )
 {
 	TCHAR dirName[MAX_PATH];
 	WIN32_FIND_DATA FindFileData;
 	HANDLE hFind = INVALID_HANDLE_VALUE;
 
-	_stprintf_s( dirName , _T( "%s\\*" ) , deletePath);
+	_stprintf_s( dirName , _T( "%s\\*" ) , deletePath );
 	hFind = FindFirstFile( dirName , &FindFileData );
-	if( hFind == INVALID_HANDLE_VALUE )
-	{
-		if( RemoveDirectory( dirName ) )
-		{
-			_tprintf_s( _T( "%s is deleted\n" ) , dirName );
-		}
-		else
-		{
-			_tprintf_s( _T( "%s is not found\n" ) , dirName );
-		}
-	}
-	else
+	if( hFind != INVALID_HANDLE_VALUE )
 	{
 		RemoveDirIter( FindFileData , deletePath );
 		while( FindNextFile( hFind , &FindFileData ) )
@@ -379,14 +375,21 @@ bool Cmd::RemoveDir(TCHAR* deletePath)
 			RemoveDirIter( FindFileData , deletePath );
 		}
 	}
+	RemoveDirectory( deletePath );
 	FindClose( hFind );
 	return true;
 }
 
-void Cmd::RemoveDirIter( WIN32_FIND_DATA findFileData , TCHAR* srcName)
+void Cmd::RemoveDirIter( WIN32_FIND_DATA findFileData , TCHAR* srcName )
 {
+	if( !_tcscmp( findFileData.cFileName , _T( "." ) ) || !_tcscmp( findFileData.cFileName , _T( ".." ) ) )
+	{
+		return;
+	}
+
 	TCHAR path[MAX_STR_LEN] = { 0 , };
 	_stprintf_s( path , _T( "%s\\%s" ) , srcName , findFileData.cFileName );
+
 	if( findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY )
 	{
 		RemoveDir( path );
@@ -397,7 +400,7 @@ void Cmd::RemoveDirIter( WIN32_FIND_DATA findFileData , TCHAR* srcName)
 	}
 }
 
-void Cmd::deleteFile()
+void Cmd::DeleteFile()
 {
 	TCHAR fileName[MAX_STR_LEN];
 	m_StringStream.clear();
@@ -410,5 +413,23 @@ void Cmd::deleteFile()
 	else
 	{
 		_tprintf_s( _T( "%s is not found\n" ) , fileName );
+	}
+}
+
+void Cmd::RenameFile()
+{
+	TCHAR oldName[MAX_STR_LEN];
+	TCHAR newName[MAX_STR_LEN];
+	m_StringStream.clear();
+	m_StringStream.str( m_LastString );
+	m_StringStream >> oldName;
+	m_StringStream >> newName;
+	if( !_trename( oldName , newName ) )
+	{
+		_tprintf_s( _T( "%s is renamed by %s\n" ) , oldName , newName );
+	}
+	else
+	{
+		_tprintf_s( _T( "%s is not found\n" ) , oldName );
 	}
 }
