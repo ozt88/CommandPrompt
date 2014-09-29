@@ -43,6 +43,7 @@ void Cmd::Init( int argc , _TCHAR* argv[] )
 		for( int i = 1; i < argc; ++i )
 		{
 			m_StringStream << argv[i];
+			m_StringStream << _T( " " );
 		}
 		std::wstring buffer;
 		m_StringStream >> m_CmdString;
@@ -51,6 +52,7 @@ void Cmd::Init( int argc , _TCHAR* argv[] )
 		{
 			m_LastString = m_LastString + _T( " " ) + buffer;
 		}
+		m_InputString = m_CmdString + _T( " " ) + m_LastString;
 		CmdProc();
 	}
 }
@@ -89,48 +91,61 @@ void Cmd::CmdProc()
 	{
 		case CMD_EXIT:
 			m_IsRunning = FALSE;
-			return;
+			break;
 		case CMD_PWD:
 			GetCurrentDirectory( MAX_PATH , secondCmd );
 			std::wcout << secondCmd << std::endl;
-			return;
+			break;
 		case CMD_ECHO:
 			std::wcout << _T( "echo:" ) << m_LastString << std::endl;
-			return;
+			break;
 		case CMD_START:
 			StartNewCmd( CreateNextCommand( m_CmdName ) );
-			return;
+			break;
 		case CMD_ETC:
 			StartNewCmd( CreateNextCommand( m_CmdString ) );
 			std::wcout << m_InputString << std::endl;
-			return;
+			break;
 		case CMD_LIST:
 			ListProcessInfo();
-			return;
+			break;
 		case CMD_KILL:
 			KillProcess();
-			return;
+			break;
 		case CMD_DIR:
 			ShowDir();
-			return;
+			break;
 		case CMD_MKD:
 			MakeDir();
-			return;
+			break;
 		case CMD_RMD:
 			m_StringStream.clear();
 			m_StringStream.str( m_LastString );
 			m_StringStream >> secondCmd;
 			RemoveDir( secondCmd );
-			return;
+			break;
 		case CMD_DEL:
 			DeleteFile();
-			return;
+			break;
 		case CMD_REN:
 			RenameFile();
+			break;
+		case CMD_SORT:
+			Sort();
+			break;
+		case CMD_TYPE:
+			Type();
+			break;
+		case CMD_LASTCMD:
+			LastCmdProc();
 			return;
+		case CMD_HISTORY:
+			History();
+			break;
 		default:
 			return;
 	}
+	m_CmdList.push_back( m_InputString );
 }
 
 
@@ -192,6 +207,22 @@ CmdStatus Cmd::ReadCommand()
 	{
 		result = CMD_REN;
 	}
+	else if( !m_CmdString.compare( _T( "sort" ) ) )
+	{
+		result = CMD_SORT;
+	}
+	else if( !m_CmdString.compare( _T( "type" ) ) )
+	{
+		result = CMD_TYPE;
+	}
+	else if( !m_CmdString.compare( _T( "history" ) ) )
+	{
+		result = CMD_HISTORY;
+	}
+	else if( m_CmdString.front() == '!' )
+	{
+		result = CMD_LASTCMD;
+	}
 	else
 	{
 		result = CMD_ETC;
@@ -206,7 +237,7 @@ void Cmd::StartNewCmd( std::wstring& command )
 	PROCESS_INFORMATION pi;
 	si.cb = sizeof( si );
 	CreateProcess( NULL , ( TCHAR* )command.c_str() , NULL , NULL ,
-				   TRUE , CREATE_NEW_CONSOLE , NULL , NULL , &si , &pi );
+				   FALSE , CREATE_NEW_CONSOLE , NULL , NULL , &si , &pi );
 	CloseHandle( pi.hProcess );
 	CloseHandle( pi.hThread );
 }
@@ -431,5 +462,163 @@ void Cmd::RenameFile()
 	else
 	{
 		_tprintf_s( _T( "%s is not found\n" ) , oldName );
+	}
+}
+
+void Cmd::Sort()
+{
+	STARTUPINFO si = { 0 , };
+	PROCESS_INFORMATION pi;
+	si.cb = sizeof( si );
+
+	TCHAR nextCmd[MAX_STR_LEN];
+	m_StringStream.clear();
+	m_StringStream.str( m_LastString );
+	m_StringStream >> nextCmd;
+
+	if( !_tcscmp( nextCmd , _T( ">" ) ) )
+	{
+		SECURITY_ATTRIBUTES fileSec = { sizeof( SECURITY_ATTRIBUTES ) , NULL , TRUE };
+		m_StringStream >> nextCmd;
+		HANDLE hFile = CreateFile( nextCmd , GENERIC_WRITE , FILE_SHARE_READ ,
+								   &fileSec , CREATE_ALWAYS , FILE_ATTRIBUTE_NORMAL , NULL );
+		si.hStdOutput = hFile;
+		si.hStdInput = GetStdHandle( STD_INPUT_HANDLE );
+		si.hStdError = GetStdHandle( STD_ERROR_HANDLE );
+		si.dwFlags |= STARTF_USESTDHANDLES;
+
+		m_IsRunning = CreateProcess( NULL , ( TCHAR* )m_CmdString.c_str() , NULL , NULL ,
+									 TRUE , 0 , NULL , NULL , &si , &pi );
+		WaitForSingleObject( pi.hProcess , INFINITE );
+		CloseHandle( hFile );
+	}
+	else
+	{
+		m_IsRunning = CreateProcess( NULL , ( TCHAR* )m_CmdString.c_str() , NULL , NULL ,
+									 FALSE , 0 , NULL , NULL , &si , &pi );
+		WaitForSingleObject( pi.hProcess , INFINITE );
+	}
+	CloseHandle( pi.hProcess );
+	CloseHandle( pi.hThread );
+}
+
+void Cmd::Type()
+{
+	TCHAR secondCmd[MAX_STR_LEN];
+	TCHAR thirdCmd[MAX_STR_LEN];
+	TCHAR forthCmd[MAX_STR_LEN];
+
+	m_StringStream.clear();
+	m_StringStream.str( m_LastString );
+	m_StringStream >> secondCmd;
+	m_StringStream >> thirdCmd;
+	m_StringStream >> forthCmd;
+
+	if( !_tcscmp( thirdCmd , _T( "|" ) ) )
+	{
+		//For Type
+
+		HANDLE hReadPipe , hWritePipe;
+		SECURITY_ATTRIBUTES pipeSA = { sizeof( SECURITY_ATTRIBUTES ) , NULL , TRUE };
+		CreatePipe( &hReadPipe , &hWritePipe , &pipeSA , 0 );
+
+		STARTUPINFO siType = { 0 , };
+		PROCESS_INFORMATION piType;
+		siType.cb = sizeof( siType );
+
+		siType.hStdOutput = hWritePipe;
+		siType.hStdInput = GetStdHandle( STD_INPUT_HANDLE );
+		siType.hStdError = GetStdHandle( STD_ERROR_HANDLE );
+		siType.dwFlags |= STARTF_USESTDHANDLES;
+		m_CmdString = m_CmdString + _T(" ") + secondCmd;
+		m_IsRunning = CreateProcess( NULL , (TCHAR*)m_CmdString.c_str() , NULL , NULL ,
+									 TRUE , 0 , NULL , NULL , &siType , &piType );
+		CloseHandle( piType.hThread );
+		CloseHandle( hWritePipe );
+
+		//For Sort
+
+		STARTUPINFO siSort = { 0 , }; 
+		PROCESS_INFORMATION piSort;
+		siSort.cb = sizeof( siSort );
+
+		siSort.hStdOutput = GetStdHandle( STD_OUTPUT_HANDLE );
+		siSort.hStdInput = hReadPipe;
+		siSort.hStdError = GetStdHandle( STD_ERROR_HANDLE );
+		siSort.dwFlags |= STARTF_USESTDHANDLES;
+
+		m_IsRunning = CreateProcess( NULL , forthCmd , NULL , NULL ,
+									 TRUE , 0 , NULL , NULL , &siSort , &piSort );
+
+		CloseHandle( piSort.hThread );
+		CloseHandle( hReadPipe );
+
+		WaitForSingleObject( piType.hProcess , INFINITE );
+		WaitForSingleObject( piSort.hProcess , INFINITE );
+
+		CloseHandle( piType.hProcess );
+		CloseHandle( piSort.hProcess );
+	}
+	else
+	{
+		STARTUPINFO si = { 0 , };
+		PROCESS_INFORMATION pi;
+		si.cb = sizeof( si );
+
+		m_CmdString = m_CmdString + _T( " " ) + secondCmd;
+		m_IsRunning = CreateProcess( NULL , ( TCHAR* )m_CmdString.c_str() , NULL , NULL ,
+									 FALSE , 0 , NULL , NULL , &si , &pi );
+		WaitForSingleObject( pi.hProcess , INFINITE );
+		_tprintf( _T( "\n" ) );
+		CloseHandle( pi.hProcess );
+		CloseHandle( pi.hThread );
+	}
+}
+
+void Cmd::LastCmdProc()
+{
+	std::wstring nextCmd;
+
+	if( m_CmdString.length() == 2 && m_CmdString.at(1) == '!')
+	{
+		nextCmd = m_CmdList.back();
+	}
+	else
+	{
+		m_CmdString.erase( m_CmdString.begin() );
+		for( auto cmdIter : m_CmdList )
+		{
+			if( cmdIter.find( m_CmdString ) != std::wstring::npos )
+			{
+				nextCmd = cmdIter;
+				break;
+			}
+		}
+	}
+
+	m_CmdString.clear();
+	m_LastString.clear();
+	m_StringStream.clear();
+
+	m_InputString = nextCmd;
+	m_StringStream.str( m_InputString );
+	m_StringStream >> m_CmdString;
+	std::transform( m_CmdString.begin() , m_CmdString.end() , m_CmdString.begin() , tolower );
+	std::wstring buffer;
+	m_StringStream >> m_LastString;
+
+	while( m_StringStream >> buffer )
+	{
+		m_LastString = m_LastString + _T( " " ) + buffer;
+	}
+	CmdProc();
+}
+
+void Cmd::History()
+{
+	_fputts( _T( "==LAST COMMAND==\n" ) , stdout );
+	for( auto lastCmd : m_CmdList )
+	{
+		std::wcout <<lastCmd << std::endl;
 	}
 }

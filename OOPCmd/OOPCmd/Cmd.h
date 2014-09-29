@@ -17,7 +17,10 @@ enum CmdStatus
 	CMD_RMD ,	//디렉토리 삭제
 	CMD_DEL ,	//파일 삭제
 	CMD_REN ,	//이름 변경
-
+	CMD_SORT ,	//Sort
+	CMD_TYPE ,	//Type
+	CMD_LASTCMD,//LAST Command
+	CMD_HISTORY,//History
 };
 
 class Cmd
@@ -29,10 +32,7 @@ public:
 
 	void			Init( int argc , _TCHAR* argv[] );
 	void			Run();
-	void			SetCommand( std::wstring name )
-	{
-		m_CmdName = name;
-	}
+	void			SetCommand( std::wstring name ){m_CmdName = name;}
 
 private:
 
@@ -49,9 +49,11 @@ private:
 	void			StartNewCmd( std::wstring& command );
 	std::wstring	CreateNextCommand( std::wstring& beginCommand );
 
+	//process management
 	bool			ListProcessInfo();
 	bool			KillProcess();
 
+	//directory management
 	HANDLE			GetProcessSnapShot();
 	PROCESSENTRY32	GetProcessEntryFirst32( HANDLE& hSnap );
 	DWORD			GetProcessID( std::wstring& procName , HANDLE& hSnap , PROCESSENTRY32& pe32 );
@@ -65,8 +67,15 @@ private:
 	void			DeleteFile();
 	void			RenameFile();
 
-private:
+	//sort & pipe
+	void			Sort();
+	void			Type();
 
+	//History
+	void			LastCmdProc();
+	void			History();
+
+private:
 	static Cmd*					m_Instance;
 	bool						m_IsRunning;
 	std::wstringstream			m_StringStream;
@@ -75,5 +84,6 @@ private:
 	std::wstring				m_LastString;
 	std::wstring				m_ErrorMsg;
 	std::wstring				m_CmdName;
+	std::vector<std::wstring>	m_CmdList;
 };
 
